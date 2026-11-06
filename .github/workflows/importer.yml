@@ -1,0 +1,30 @@
+# Mise à jour des cabanes : dépose dans depot/ l'index.html créé par « Préparer la version en ligne ».
+# Cette action en extrait les données vers data/, retire le fichier déposé, et le site se republie tout seul.
+name: Importer une publication
+on:
+  push:
+    branches: [main]
+    paths: ["depot/**.html"]
+jobs:
+  importer:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Extraire les données
+        run: |
+          shopt -s nullglob
+          for f in depot/*.html; do python tools/importer_publication.py "$f"; git rm -q "$f"; done
+      - name: Construire pour vérifier
+        run: python build.py
+      - name: Enregistrer
+        run: |
+          git config user.name "Le Bon Toit (robot)"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A data depot
+          git commit -m "Données : nouvelle publication depuis le carnet" || echo "Rien de nouveau"
+          git push

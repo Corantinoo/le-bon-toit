@@ -1,0 +1,581 @@
+<div class="app">
+  <nav class="rail" id="tabs" aria-label="Navigation principale">
+    <button class="rail-brand" type="button" data-page="carte" aria-label="Le Bon Toit, retour à la carte"><svg aria-hidden="true"><use href="#i-toit"/></svg><span>Le Bon<br>Toit</span></button>
+    <button class="nav on" type="button" data-page="carte"><svg aria-hidden="true"><use href="#i-carte"/></svg>Carte</button>
+    <button class="nav" type="button" data-page="classement"><svg aria-hidden="true"><use href="#i-podium"/></svg>Classement</button>
+    <button class="nav" type="button" data-page="culture"><svg aria-hidden="true"><use href="#i-livre"/></svg><span>Coin culture</span></button>
+    <button class="nav" type="button" data-page="guide"><svg aria-hidden="true"><use href="#i-boussole"/></svg>Guide</button>
+    <button class="nav" type="button" data-page="participer"><svg aria-hidden="true"><use href="#i-proposer"/></svg>Participer</button>
+    <button class="nav no-partage" type="button" data-page="contrib"><svg aria-hidden="true"><use href="#i-boite"/></svg><span>À relire</span></button>
+    <span class="spacer"></span>
+    <button class="nav" type="button" data-page="profil"><span class="avatar-mini" id="railAvatar" aria-hidden="true">?</span>Mon profil</button>
+    <button class="nav" type="button" data-page="apropos"><svg aria-hidden="true"><use href="#i-info"/></svg>À propos</button>
+  </nav>
+
+  <div class="main">
+    <header class="top">
+      <button class="brand-m" type="button" data-page="carte" aria-label="Le Bon Toit, retour à la carte"><svg aria-hidden="true"><use href="#i-toit"/></svg>Le Bon Toit</button>
+      <p class="tagline" id="tagline">Un espace communautaire pour partager les cabanes qui valent la montée, parmi les centaines que comptent les Pyrénées.</p>
+      <div class="tools">
+        <button class="btn primary no-partage" id="btnAdd" type="button" title="Ajouter une cabane au carnet" aria-label="Ajouter une cabane"><svg><use href="#i-plus"/></svg><span class="lbl">Ajouter une cabane</span></button>
+        <button class="btn soft no-partage" id="btnRI" type="button" aria-pressed="false" title="Afficher aussi les autres abris connus (refuges.info), non vérifiés" aria-label="Afficher les autres abris connus de refuges.info"><svg><use href="#i-ri"/></svg><span class="lbl">Autres abris</span></button>
+        <button class="btn soft icon" id="btnLoc" type="button" title="Me localiser" aria-label="Me localiser"><svg><use href="#i-loc"/></svg></button>
+        <details class="menu" id="menuData">
+          <summary class="btn soft" title="Sauvegarde, export et partage" aria-label="Données : sauvegarde, export et partage"><svg><use href="#i-db"/></svg><span class="lbl">Données</span><span class="bkdot no-partage" id="bkDot"></span></summary>
+          <div class="menu-pop">
+            <div class="no-partage" style="display:grid;gap:2px">
+              <div class="menu-sec">Sauvegarde automatique</div>
+              <p class="menu-stat" id="bkStat"></p>
+              <button type="button" id="bkLier"><span id="bkLierTxt">Choisir un dossier de sauvegarde</span><small>Tout y est enregistré à chaque modification, photos comprises</small></button>
+              <button type="button" id="bkReprendre" hidden>Reprendre la sauvegarde auto</button>
+              <hr>
+              <button type="button" id="expJson">Télécharger une sauvegarde<small>Sans les photos, fichier léger</small></button>
+              <button type="button" id="expJsonFull">Télécharger une sauvegarde complète<small>Avec les photos</small></button>
+              <label for="impJson" tabindex="0">Restaurer depuis un fichier<small>Fusionne avec tes cabanes actuelles</small></label>
+              <button type="button" id="impDossier">Restaurer depuis un dossier<small>Dossier de sauvegarde automatique</small></button>
+              <hr>
+              <div class="menu-sec">Partager et publier</div>
+              <button type="button" id="btnPublier">Préparer la version en ligne<small>Crée le fichier index.html du site public</small></button>
+              <button type="button" id="btnPartagerTout">Partager avec des amis…<small>Crée un fichier à leur envoyer</small></button>
+              <hr>
+            </div>
+            <button type="button" id="expGpx">Exporter en GPX<small>Cabanes et itinéraires, pour montre ou appli GPS</small></button>
+            <div class="partage-only" style="display:grid;gap:2px">
+              <hr>
+              <div class="menu-sec">Mon carnet personnel</div>
+              <button type="button" id="btnImporterPartage">Copier ces cabanes dans mon carnet<small>Pour noter tes propres sorties, dans ce navigateur</small></button>
+              <button type="button" id="btnMonCarnet">Ouvrir mon carnet<small>Ton carnet à toi, enregistré dans ce navigateur</small></button>
+            </div>
+          </div>
+        </details>
+        <input type="file" id="impJson" accept=".json,application/json" hidden>
+      </div>
+    </header>
+
+    <div class="pages">
+      <div class="page" id="pageCarte">
+        <aside class="panel" id="panel" aria-label="Liste et fiches des cabanes">
+          <button class="sheet-handle" id="handle" type="button"><span id="handleTxt">Cabanes</span></button>
+
+          <section class="view" id="vueListe">
+            <div class="bandeau" id="bandeau"></div>
+            <div class="filters">
+              <input class="search" id="q" type="search" placeholder="Une cabane, un massif, un départ…" autocomplete="off" aria-label="Rechercher une cabane">
+              <div class="seg" id="segStatut">
+                <button type="button" data-v="tous" class="on">Toutes<span id="nTous"></span></button>
+                <button type="button" data-v="faite"><span class="lblF">Faites</span><span id="nFaite"></span></button>
+                <button type="button" data-v="afaire"><span class="lblA">À faire</span><span id="nAfaire"></span></button>
+              </div>
+              <div class="frow">
+                <button class="btn soft sm" type="button" id="btnFiltres" aria-expanded="false" aria-controls="fpanel"><svg><use href="#i-filtre"/></svg>Filtres <span class="badge" id="nbFiltres"></span></button>
+                <button class="linkbtn" type="button" id="resetF" hidden>Tout effacer</button>
+                <span class="grow"></span>
+                <select id="tri" aria-label="Trier par"></select>
+              </div>
+              <div class="actifs" id="actifs"></div>
+            </div>
+            <div class="scroll" id="listeScroll">
+              <div class="fpanel" id="fpanel" hidden>
+                <div class="fsec"><h4>Type</h4><div class="chips" id="fTypes"></div></div>
+                <div class="fsec"><h4 id="hNotes">Notes et coups de cœur</h4>
+                  <div class="minmax">
+                    <div class="mm"><label for="fRessMin" id="lRessMin">Ressenti minimal</label><select id="fRessMin"><option value="0">Peu importe</option><option value="3">3 et plus</option><option value="3.5">3,5 et plus</option><option value="4">4 et plus</option><option value="4.5">4,5 et plus</option></select></div>
+                    <div class="mm"><label for="fNoteMin" id="lNoteMin">Note critères minimale</label><select id="fNoteMin"><option value="0">Peu importe</option><option value="3">3 et plus</option><option value="3.5">3,5 et plus</option><option value="4">4 et plus</option><option value="4.5">4,5 et plus</option></select></div>
+                    <div class="mm no-partage"><label for="fEnvieMin">Envie minimale (à faire)</label><select id="fEnvieMin"><option value="0">Peu importe</option><option value="3">3 et plus</option><option value="4">4 et plus</option><option value="5">5</option></select></div>
+                  </div>
+                  <div class="chips"><button type="button" class="chip partage-only" data-b="favoris">Mes favoris</button><button type="button" class="chip" data-b="coeur" id="chipCoeur">♥ Coups de cœur</button><button type="button" class="chip" data-b="nuit" id="chipNuit">Déjà dormi sur place</button><button type="button" class="chip" data-b="photos">Avec photos</button></div>
+                </div>
+                <div class="fsec"><h4>Altitude (m)</h4>
+                  <div class="minmax">
+                    <div class="mm"><label for="fAltMin">Minimum</label><input id="fAltMin" type="number" step="50" min="0" inputmode="numeric" placeholder="ex. 1500"></div>
+                    <div class="mm"><label for="fAltMax">Maximum</label><input id="fAltMax" type="number" step="50" min="0" inputmode="numeric" placeholder="ex. 2200"></div>
+                  </div>
+                </div>
+                <div class="fsec"><h4>Accès</h4>
+                  <div class="minmax">
+                    <div class="mm"><label for="fDistMax">Distance max (km)</label><input id="fDistMax" type="number" step="0.5" min="0" inputmode="decimal"></div>
+                    <div class="mm"><label for="fDplusMax">D+ max (m)</label><input id="fDplusMax" type="number" step="50" min="0" inputmode="numeric"></div>
+                    <div class="mm"><label for="fDureeMax">Durée max (h)</label><input id="fDureeMax" type="number" step="0.5" min="0" inputmode="decimal"></div>
+                    <div class="mm"><label for="fDiffMax">Difficulté max</label><select id="fDiffMax"></select></div>
+                    <div class="mm"><label for="fBalisage">Sentier</label><select id="fBalisage"><option value="">Peu importe</option><option value="Sentier balisé">Balisé uniquement</option><option value="nonhors">Non balisé ou hors sentier</option></select></div>
+                    <div class="mm"><label for="fPlacesMin">Places minimum</label><input id="fPlacesMin" type="number" step="1" min="0" inputmode="numeric"></div>
+                  </div>
+                </div>
+                <div class="fsec"><h4>Indispensables</h4><div class="chips" id="fEquip"></div></div>
+                <div class="fsec"><h4>Saison recommandée</h4><div class="chips" id="fSaisons"></div></div>
+                <div class="fsec"><h4>À éviter</h4><div class="chips" id="fEviter"></div></div>
+                <div class="fsec"><h4>Massif</h4><div class="mm"><select id="fMassif" aria-label="Massif"></select></div></div>
+                <p class="fnote">Une cabane sans l'information demandée est masquée par le filtre.</p>
+              </div>
+              <div class="listhead"><span class="count" id="count">0 cabane</span><button class="linkbtn" type="button" id="btnFit">Cadrer la carte</button></div>
+              <div id="exBar"></div>
+              <div class="list" id="list"></div>
+            </div>
+          </section>
+
+          <section class="view" id="vueDetail" hidden>
+            <div class="vhead">
+              <button class="btn soft icon" type="button" id="detailBack" title="Retour à la liste" aria-label="Retour à la liste"><svg><use href="#i-back"/></svg></button>
+              <h2>Fiche</h2>
+              <button class="btn soft icon" type="button" id="dCentrer" title="Centrer la carte" aria-label="Centrer la carte sur la cabane"><svg><use href="#i-cadre"/></svg></button>
+            </div>
+            <div class="scroll" id="detailScroll"><div class="det" id="detail"></div></div>
+          </section>
+
+          <section class="view" id="vueItin" hidden>
+            <div class="vhead">
+              <button class="btn soft icon" type="button" id="itinBack" title="Retour à la fiche" aria-label="Retour à la fiche"><svg><use href="#i-back"/></svg></button>
+              <h2>Itinéraire d'accès</h2>
+            </div>
+            <div class="scroll"><div class="det" id="itin"></div></div>
+            <div class="vfoot no-partage" id="itinFoot" hidden>
+              <button class="btn ghost" type="button" id="itinEffacer">Autre départ</button>
+              <span class="grow"></span>
+              <button class="btn primary" type="button" id="itinSave">Enregistrer</button>
+            </div>
+          </section>
+
+          <section class="view" id="vueFiche" hidden>
+            <div class="vhead">
+              <button class="btn soft icon" type="button" id="ficheBack" title="Retour" aria-label="Retour"><svg><use href="#i-back"/></svg></button>
+              <h2 id="ficheTitre">Nouvelle cabane</h2>
+            </div>
+            <form class="scroll formbody" id="form" novalidate>
+              <fieldset>
+                <legend>Identité</legend>
+                <div class="f"><label for="f-nom">Nom</label><input id="f-nom" required placeholder="Cabane de …"></div>
+                <div class="row">
+                  <div class="f"><label for="f-type">Type</label><select id="f-type"></select></div>
+                  <div class="f"><label for="f-statut">Statut</label><select id="f-statut"><option value="afaire">À faire</option><option value="faite">Faite</option></select></div>
+                </div>
+                <div class="row">
+                  <div class="f" id="wrapEnvie"><span class="lab">Mon envie d'y aller</span><span id="f-envie"></span></div>
+                  <label class="ck" style="align-self:end"><input type="checkbox" id="f-coeur"> Coup de cœur</label>
+                </div>
+              </fieldset>
+              <fieldset>
+                <legend>Emplacement</legend>
+                <p class="hint" id="posHint">Clique sur la carte pour placer la cabane.</p>
+                <div class="row">
+                  <div class="f"><label for="f-lat">Latitude</label><input id="f-lat" type="number" step="0.00001" inputmode="decimal"></div>
+                  <div class="f"><label for="f-lng">Longitude</label><input id="f-lng" type="number" step="0.00001" inputmode="decimal"></div>
+                  <div class="f"><label for="f-alt">Altitude (m)</label><input id="f-alt" type="number" step="1" inputmode="numeric"></div>
+                </div>
+                <div class="row">
+                  <div class="f"><label for="f-massif">Massif / vallée</label><input id="f-massif" list="massifs" placeholder="Ossau, Aure…"></div>
+                  <div class="f"><label for="f-depart">Départ</label><input id="f-depart" placeholder="Parking, village…"></div>
+                </div>
+                <datalist id="massifs"></datalist>
+              </fieldset>
+              <fieldset>
+                <legend>Accès</legend>
+                <p class="hint">Astuce : le bouton « Itinéraire » de la fiche calcule distance, D+ et durée depuis un point de départ.</p>
+                <div class="row">
+                  <div class="f"><label for="f-dist">Distance aller (km)</label><input id="f-dist" type="number" step="0.1" min="0" inputmode="decimal"></div>
+                  <div class="f"><label for="f-dplus">Dénivelé + (m)</label><input id="f-dplus" type="number" step="10" min="0" inputmode="numeric"></div>
+                  <div class="f"><label for="f-duree">Durée</label><input id="f-duree" placeholder="2h15"></div>
+                </div>
+                <div class="row">
+                  <div class="f"><label for="f-difficulte">Difficulté</label><select id="f-difficulte"></select></div>
+                  <div class="f"><label for="f-balisage">Sentier</label><select id="f-balisage"></select></div>
+                </div>
+              </fieldset>
+              <fieldset>
+                <legend>Sur place</legend>
+                <div class="row">
+                  <div class="f"><label for="f-etat">État</label><select id="f-etat"></select></div>
+                  <div class="f"><label for="f-chauffage">Cheminée / poêle</label><select id="f-chauffage"></select></div>
+                  <div class="f"><label for="f-bois">Bois</label><select id="f-bois"></select></div>
+                </div>
+                <div class="row">
+                  <div class="f"><label for="f-eau">Point d'eau</label><select id="f-eau"></select></div>
+                  <div class="f"><label for="f-couchage">Couchage</label><select id="f-couchage"></select></div>
+                  <div class="f"><label for="f-places">Places</label><input id="f-places" type="number" min="0" step="1" inputmode="numeric"></div>
+                </div>
+                <div class="row">
+                  <div class="f"><label for="f-ouverture">Ouverture</label><select id="f-ouverture"></select></div>
+                  <div class="f"><label for="f-reseau">Réseau</label><select id="f-reseau"></select></div>
+                </div>
+                <label class="ck"><input type="checkbox" id="f-berger"> Occupée l'été par un berger</label>
+              </fieldset>
+              <fieldset><legend>Équipements et environnement</legend><div class="ckgrid" id="f-equip"></div></fieldset>
+              <fieldset><legend>Points d'attention</legend><div class="ckgrid" id="f-warn"></div></fieldset>
+              <fieldset><legend>Saisons recommandées</legend><div class="ckgrid" id="f-saisons"></div></fieldset>
+              <fieldset id="fsCrit">
+                <legend>Notes détaillées</legend>
+                <div class="critrow"><strong>Mon ressenti global</strong><span id="f-ressenti"></span></div>
+                <p class="hint">Le ressenti est ta note de cœur, indépendante des critères. Les notes se mettent à jour toutes seules avec tes retours de sortie (moyenne de tes visites). Tu peux les ajuster ici.</p>
+                <div id="f-crit" style="display:grid;gap:6px"></div>
+              </fieldset>
+              <fieldset>
+                <legend>Textes</legend>
+                <div class="f"><label for="f-mot">Le mot de l'auteur <small>(public : affiché sur le site, écris-le avec tes mots)</small></label><textarea id="f-mot" placeholder="Ce qui rend cette cabane chouette, ce qu'il faut savoir avant d'y monter…"></textarea></div>
+                <div class="f"><label for="f-notes">Mes notes privées <small>(jamais publiées, sauf si tu le choisis au moment de partager)</small></label><textarea id="f-notes" placeholder="Rappels perso, infos à vérifier, ce qu'il faut monter…"></textarea></div>
+                <div class="f"><label for="f-lien">Lien source (refuges.info, pyrenees-refuges…)</label><input id="f-lien" type="url" placeholder="https://"></div>
+              </fieldset>
+              <p class="hint warn" id="formErr" hidden></p>
+            </form>
+            <div class="vfoot">
+              <button class="btn danger" type="button" id="btnDel">Supprimer</button>
+              <span class="grow"></span>
+              <button class="btn ghost" type="button" id="btnCancel">Annuler</button>
+              <button class="btn primary" type="button" id="btnSave">Enregistrer</button>
+            </div>
+          </section>
+
+          <section class="view" id="vueRetour" hidden>
+            <div class="vhead">
+              <button class="btn soft icon" type="button" id="retourBack" title="Retour" aria-label="Retour"><svg><use href="#i-back"/></svg></button>
+              <h2 id="retourTitre">Mon avis</h2>
+            </div>
+            <form class="scroll formbody" id="formRetour" novalidate>
+              <p class="hint" id="retourCab"></p>
+              <fieldset>
+                <legend>La sortie</legend>
+                <div class="row">
+                  <div class="f"><label for="r-date">Date</label><input id="r-date" type="date"></div>
+                  <div class="f"><label for="r-montee">Durée de montée</label><input id="r-montee" placeholder="2h30"></div>
+                </div>
+                <div class="row">
+                  <div class="f"><label for="r-meteo">Météo</label><select id="r-meteo"></select></div>
+                  <div class="f"><label for="r-monde">Monde sur place</label><select id="r-monde"></select></div>
+                </div>
+                <div class="f"><label for="r-avec">Avec qui <small>(privé, jamais partagé)</small></label><input id="r-avec" placeholder="Seul, avec Paul et Léa…"></div>
+                <label class="ck"><input type="checkbox" id="r-nuit"> J'ai dormi sur place</label>
+              </fieldset>
+              <fieldset>
+                <legend>Ce que j'ai trouvé</legend>
+                <p class="hint">Met la fiche à jour si c'est ta visite la plus récente. La date sert d'« état constaté » sur le site.</p>
+                <div class="row">
+                  <div class="f"><label for="r-etat">État</label><select id="r-etat"></select></div>
+                  <div class="f"><label for="r-bois">Bois</label><select id="r-bois"></select></div>
+                  <div class="f"><label for="r-eau">Eau</label><select id="r-eau"></select></div>
+                </div>
+              </fieldset>
+              <fieldset>
+                <legend>Ma note</legend>
+                <div class="critrow"><strong>Mon ressenti</strong><span id="r-ressenti"></span></div>
+                <p class="hint">Ton impression globale. Puis, si tu veux, le détail par critère :</p>
+                <div id="r-crit" style="display:grid;gap:6px"></div>
+                <div class="choix" role="radiogroup" aria-label="Je recommande ou non">
+                  <label><input type="radio" name="r-reco" value="oui">Je recommande</label>
+                  <label><input type="radio" name="r-reco" value="non">Je ne recommande pas</label>
+                  <label><input type="radio" name="r-reco" value="">Sans avis</label>
+                </div>
+                <label class="ck"><input type="checkbox" id="r-coeur"> Coup de cœur</label>
+              </fieldset>
+              <fieldset>
+                <legend>Mon avis et mes photos</legend>
+                <div class="f"><label for="r-com">Mon avis <small>(publié sur le site)</small></label><textarea id="r-com" placeholder="Coucher de soleil, bois humide, source tarie fin août…"></textarea></div>
+                <div class="f"><label for="r-photos">Photos de la sortie</label><input id="r-photos" type="file" accept="image/*" multiple></div>
+              </fieldset>
+            </form>
+            <div class="vfoot">
+              <span class="grow"></span>
+              <button class="btn ghost" type="button" id="retourCancel">Annuler</button>
+              <button class="btn primary" type="button" id="retourSave">Publier mon avis</button>
+            </div>
+          </section>
+        </aside>
+
+        <div class="map-wrap" id="mapWrap">
+          <div id="map" role="region" aria-label="Carte des cabanes"></div>
+          <button class="btn-liste" type="button" id="btnListe" aria-controls="panel"></button>
+          <div id="infoJourBox"></div>
+          <div class="placing-banner" id="placing" hidden></div>
+        </div>
+      </div>
+
+      <div class="page contenu" id="pageClassement" hidden>
+        <div class="wrap">
+          <div class="ph">
+            <div>
+              <h2>Classement</h2>
+              <p id="clIntro"></p>
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+              <label class="lbl-up">Massif<select id="clMassif"></select></label>
+              <label class="lbl-up">Classer par<select id="clTri"></select></label>
+            </div>
+          </div>
+          <div class="seg no-partage" id="clStatut" style="max-width:420px">
+            <button type="button" data-v="faite" class="on">Faites</button>
+            <button type="button" data-v="afaire">À faire</button>
+            <button type="button" data-v="tous">Toutes</button>
+          </div>
+          <div class="chips" id="clTypes" role="group" aria-label="Type d'abri"></div>
+          <div class="podium" id="clPodium"></div>
+          <div class="cl-ctrl no-partage"><label><input type="checkbox" id="clFiltres"> Appliquer les filtres de la carte</label></div>
+          <div class="cl-sum no-partage" id="clSum"></div>
+          <div class="tblwrap"><table class="rk" id="clTable"></table></div>
+          <p class="hint" id="clNote"></p>
+        </div>
+      </div>
+
+      <div class="page contenu" id="pageCulture" hidden>
+        <div class="wrap">
+          <div class="ph"><div><h2>Coin culture</h2><p>Histoire, légendes, bêtes, fleurs et bonnes manières de la montagne. Un petit texte chaque jour, à lire au coin du feu.</p></div></div>
+          <article class="featured" id="cuJour"></article>
+          <div class="cta-culture"><p><b>Tu connais une histoire de la montagne ?</b><br>Une légende, une anecdote, une bête, une fleur ou une bonne pratique : propose ton texte, il pourra devenir une info du jour.</p><button class="btn primary" type="button" id="cuProposer">Proposer un texte</button></div>
+          <div class="chips" id="cuThemes" role="group" aria-label="Thèmes"></div>
+          <div class="arts" id="cuListe"></div>
+        </div>
+      </div>
+
+      <div class="page contenu" id="pageParticiper" hidden>
+        <div class="wrap">
+          <div class="ph"><div><h2>Participer au carnet</h2><p>Tu connais une cabane qui mérite sa place, ou tu reviens d'une nuit là-haut ? Chaque contribution est relue par un humain avant d'apparaître sur le site.</p></div></div>
+          <div class="tabs2" role="tablist" aria-label="Type de contribution">
+            <button type="button" role="tab" data-pm="prop" aria-selected="true" aria-controls="formPart">Proposer une cabane</button>
+            <button type="button" role="tab" data-pm="sig" aria-selected="false" aria-controls="formPart">Signaler un état</button>
+            <button type="button" role="tab" data-pm="avis" aria-selected="false" aria-controls="formPart">Avis ou correction</button>
+            <button type="button" role="tab" data-pm="culture" aria-selected="false" aria-controls="formPart">Texte pour le coin culture</button>
+          </div>
+          <div class="part">
+            <form id="formPart" novalidate role="tabpanel">
+              <div id="partProp" style="display:grid;gap:22px">
+                <fieldset>
+                  <legend>La cabane</legend>
+                  <div class="f"><label for="p-nom">Nom de la cabane *</label><input id="p-nom" placeholder="Ex. Cabane d'Esquierry"></div>
+                  <div class="row">
+                    <div class="f"><label for="p-massif">Massif ou vallée</label><input id="p-massif" list="massifs" placeholder="Aure, Ossau, Couserans…"></div>
+                    <div class="f"><label for="p-alt">Altitude (m)</label><input id="p-alt" type="number" inputmode="numeric" placeholder="1900"></div>
+                  </div>
+                  <div class="f"><span class="lab">Emplacement *</span>
+                    <div class="pos"><button class="btn primary sm" type="button" id="p-placer">Placer sur la carte</button><span class="val" id="p-pos">Pas encore placé</span></div>
+                    <label for="p-lien" class="lab" style="margin-top:6px">ou un lien refuges.info / des coordonnées GPS</label>
+                    <input id="p-lien" placeholder="https://www.refuges.info/point/… ou 42.87, 0.15">
+                  </div>
+                  <div class="f"><span class="lab">Type</span>
+                    <div class="choix" role="radiogroup" aria-label="Type d'abri">
+                      <label><input type="radio" name="p-type" value="Cabane non gardée" checked>Cabane non gardée</label>
+                      <label><input type="radio" name="p-type" value="Cabane pastorale">Cabane pastorale</label>
+                      <label><input type="radio" name="p-type" value="Refuge gardé">Refuge gardé</label>
+                      <label><input type="radio" name="p-type" value="Orri / abri">Orri ou abri</label>
+                    </div>
+                  </div>
+                </fieldset>
+                <fieldset>
+                  <legend>Ce qu'on y trouve</legend>
+                  <div class="choix" id="p-equip">
+                    <label><input type="checkbox" value="Cheminée ou poêle">Cheminée ou poêle</label>
+                    <label><input type="checkbox" value="Bois sur place">Bois sur place</label>
+                    <label><input type="checkbox" value="Eau à proximité">Eau à proximité</label>
+                    <label><input type="checkbox" value="Matelas">Matelas</label>
+                    <label><input type="checkbox" value="Table et bancs">Table et bancs</label>
+                    <label><input type="checkbox" value="Ouverte l'hiver">Ouverte l'hiver</label>
+                    <label><input type="checkbox" value="Berger l'été">Berger l'été</label>
+                  </div>
+                  <div class="f" style="max-width:220px"><label for="p-places">Places pour dormir</label><input id="p-places" type="number" min="0" inputmode="numeric" placeholder="6"></div>
+                </fieldset>
+              </div>
+
+              <fieldset id="partCab" hidden>
+                <legend>Quelle cabane ?</legend>
+                <div class="f"><label for="s-cab">Cabane *</label><input id="s-cab" list="nomsCabanes" placeholder="Commence à taper son nom"></div>
+                <datalist id="nomsCabanes"></datalist>
+              </fieldset>
+
+              <fieldset id="partSig" hidden>
+                <legend>Ce que tu as remarqué</legend>
+                <div class="choix" id="s-pb">
+                  <label><input type="checkbox" value="Toit qui fuit">Toit qui fuit</label>
+                  <label><input type="checkbox" value="Porte abîmée">Porte abîmée</label>
+                  <label><input type="checkbox" value="Déchets, saleté">Déchets, saleté</label>
+                  <label><input type="checkbox" value="Plus de bois">Plus de bois</label>
+                  <label><input type="checkbox" value="Source tarie">Source tarie</label>
+                  <label><input type="checkbox" value="Cabane fermée">Cabane fermée</label>
+                  <label><input type="checkbox" value="Berger présent">Berger présent</label>
+                  <label><input type="checkbox" value="Rénovée récemment">Rénovée récemment</label>
+                </div>
+              </fieldset>
+
+              <fieldset id="partAvis" hidden>
+                <legend>Ton message</legend>
+                <div class="choix" role="radiogroup" aria-label="Type de message">
+                  <label><input type="radio" name="a-type" value="avis" checked>Donner mon avis sur la cabane</label>
+                  <label><input type="radio" name="a-type" value="correction">Corriger une information de la fiche</label>
+                </div>
+                <div class="f" id="a-noteWrap"><span class="lab">Ta note</span>
+                  <div class="choix" role="radiogroup" aria-label="Ta note sur 5">
+                    <label><input type="radio" name="a-note" value="1">1</label><label><input type="radio" name="a-note" value="2">2</label><label><input type="radio" name="a-note" value="3">3</label><label><input type="radio" name="a-note" value="4">4</label><label><input type="radio" name="a-note" value="5">5 sur 5</label>
+                  </div>
+                </div>
+                <div class="f" id="a-recoWrap"><span class="lab">Tu recommandes cette cabane ?</span>
+                  <div class="choix" role="radiogroup" aria-label="Recommandation">
+                    <label><input type="radio" name="a-reco" value="oui">Je recommande</label>
+                    <label><input type="radio" name="a-reco" value="non">Je ne recommande pas</label>
+                  </div>
+                </div>
+                <div class="f" id="a-quoiWrap" hidden><span class="lab">Qu'est-ce qui est faux ou manque ?</span>
+                  <div class="choix" id="a-quoi">
+                    <label><input type="checkbox" value="Emplacement">Emplacement</label>
+                    <label><input type="checkbox" value="Accès, itinéraire">Accès, itinéraire</label>
+                    <label><input type="checkbox" value="Équipement">Équipement</label>
+                    <label><input type="checkbox" value="Eau, bois">Eau, bois</label>
+                    <label><input type="checkbox" value="Places, couchage">Places, couchage</label>
+                    <label><input type="checkbox" value="Texte de la fiche">Texte de la fiche</label>
+                    <label><input type="checkbox" value="Photo">Photo</label>
+                    <label><input type="checkbox" value="Autre">Autre</label>
+                  </div>
+                </div>
+              </fieldset>
+
+              <fieldset id="partCulture" hidden>
+                <legend>Ton texte</legend>
+                <div class="row">
+                  <div class="f"><label for="c-theme">Thème</label><select id="c-theme"></select></div>
+                  <div class="f"><label for="c-titre">Titre *</label><input id="c-titre" placeholder="Ex. La légende du lac…"></div>
+                </div>
+                <div class="f"><label for="c-source">D'où tiens-tu l'information ? <small>(livre, site, récit d'un berger… pour qu'on puisse vérifier)</small></label><input id="c-source"></div>
+              </fieldset>
+
+              <fieldset id="partPassage">
+                <legend id="x-passage-lgd">Ton passage</legend>
+                <div class="row" id="x-dateWrap">
+                  <div class="f"><label for="x-date">Date de passage</label><input id="x-date" type="month" placeholder="AAAA-MM"></div>
+                </div>
+                <div class="f" id="x-etatWrap"><span class="lab">État constaté</span>
+                  <div class="choix" role="radiogroup" aria-label="État constaté">
+                    <label><input type="radio" name="x-etat" value="Très bon">Très bon</label>
+                    <label><input type="radio" name="x-etat" value="Bon">Bon</label>
+                    <label><input type="radio" name="x-etat" value="Moyen">Moyen</label>
+                    <label><input type="radio" name="x-etat" value="Dégradé">Dégradé</label>
+                  </div>
+                </div>
+                <div class="f"><label for="x-texte" id="x-texte-lbl">Pourquoi elle mérite sa place *</label><textarea id="x-texte" rows="4"></textarea></div>
+                <p class="hint" id="x-photosHint">Tu as des photos ? Joins-les à l'e-mail qui s'ouvrira à l'envoi. Elles doivent être de toi.</p>
+              </fieldset>
+
+              <fieldset>
+                <legend>Toi</legend>
+                <div class="row">
+                  <div class="f"><label for="x-pseudo">Prénom ou pseudo *</label><input id="x-pseudo" autocomplete="nickname"></div>
+                  <div class="f"><label for="x-mail">E-mail <small>(facultatif, pour te répondre)</small></label><input id="x-mail" type="email" autocomplete="email"></div>
+                </div>
+                <label class="ck"><input type="checkbox" id="x-ok"> J'accepte que ma contribution soit publiée après relecture (éventuellement raccourcie), et les photos ou textes que j'envoie sont de moi.</label>
+              </fieldset>
+              <p class="hint warn" id="partErr" hidden></p>
+              <div class="envoi">
+                <button class="btn primary" type="submit" id="partEnvoyer">Envoyer la proposition</button>
+                <span class="hint" id="partMode"></span>
+              </div>
+              <div class="ok-box" id="partOk" hidden></div>
+            </form>
+            <aside>
+              <section class="charte">
+                <h3>La charte du Bon Toit</h3>
+                <p>Une cabane entre dans le carnet si elle offre au minimum :</p>
+                <ul>
+                  <li>un toit étanche et une porte qui ferme ;</li>
+                  <li>un endroit pour dormir au sec ;</li>
+                  <li>un intérieur propre et respecté ;</li>
+                  <li>un accès libre, sans réservation.</li>
+                </ul>
+              </section>
+              <section class="encart">
+                <h3>Ce qu'on ne publie pas</h3>
+                <ul>
+                  <li>les cabanes privées ou fermées à clé ;</li>
+                  <li>la partie réservée au berger ;</li>
+                  <li>les photos qui ne sont pas les tiennes.</li>
+                </ul>
+              </section>
+              <section class="encart" id="partCommu"></section>
+              <p class="hint" style="padding:0 6px">Un signalement daté vaut mieux qu'une note : c'est ce qui permet aux suivants de savoir à quoi s'attendre.</p>
+            </aside>
+          </div>
+        </div>
+      </div>
+
+      <div class="page contenu" id="pageGuide" hidden>
+        <div class="wrap">
+          <div class="ph"><div><h2>Le guide du bon randonneur</h2><p>Tu débutes, ou tu n'as jamais dormi en cabane ? Voici l'essentiel pour partir bien préparé, revenir en forme, et laisser la montagne comme tu l'as trouvée.</p></div></div>
+          <div class="guide" id="guideCorps"></div>
+        </div>
+      </div>
+
+      <div class="page contenu" id="pageProfil" hidden>
+        <div class="wrap" id="profilCorps"></div>
+      </div>
+
+      <div class="page contenu no-partage" id="pageContrib" hidden>
+        <div class="wrap">
+          <div class="ph"><div><h2>À relire</h2><p>Les contributions des randonneurs arrivent dans ta boîte mail. Copie le message reçu ici : tu vérifies le texte et les photos, puis tu choisis de le publier sur le site ou non.</p></div></div>
+          <div class="contrib-in carte-box">
+            <div class="f"><label for="ctTexte">Message reçu (copie-le en entier, y compris le code en bas)</label><textarea id="ctTexte" rows="6" placeholder="[Le Bon Toit] Avis : Cabane de…"></textarea></div>
+            <div class="envoi"><button class="btn primary" type="button" id="ctLire">Lire la contribution</button><span class="hint" id="ctErr"></span></div>
+          </div>
+          <div id="ctApercu"></div>
+          <div id="ctCulture"></div>
+        </div>
+      </div>
+
+      <div class="page contenu" id="pageApropos" hidden>
+        <div class="wrap">
+          <div class="ph"><div><h2>À propos</h2><p>Le Bon Toit, c'est une carte des cabanes et refuges des Pyrénées qui valent vraiment la montée, triées sur le volet parmi les centaines qui existent.</p></div></div>
+          <div class="prose" id="aproposCorps"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="lb" id="lb" hidden role="dialog" aria-modal="true" aria-label="Photo">
+  <div class="lb-top"><span class="grow" id="lbInfo"></span><button class="btn sm" type="button" id="lbClose">Fermer</button></div>
+  <div class="lb-img"><img id="lbImg" alt=""><button class="lb-nav prev" type="button" id="lbPrev" aria-label="Photo précédente">‹</button><button class="lb-nav next" type="button" id="lbNext" aria-label="Photo suivante">›</button></div>
+  <div class="lb-bot"><input class="lb-leg no-partage" id="lbLeg" placeholder="Ajouter une légende" aria-label="Légende"><span class="lb-leg" id="lbLegTxt" hidden></span><button class="btn sm no-partage" type="button" id="lbMain">Photo principale</button><button class="btn sm danger no-partage" type="button" id="lbDel">Supprimer</button></div>
+</div>
+
+<div class="modal" id="modalPartage" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="mpTitre">
+    <h3 id="mpTitre">Partager</h3>
+    <div class="f"><span class="lab">Quoi partager ?</span>
+      <label class="ck" id="mpUneWrap"><input type="radio" name="mpQuoi" value="une" id="mpUne"> <span id="mpUneLbl">Cette cabane</span></label>
+      <label class="ck"><input type="radio" name="mpQuoi" value="filtre" id="mpFiltre"> <span>Les cabanes affichées avec mes filtres (<span id="mpNbF"></span>)</span></label>
+      <label class="ck"><input type="radio" name="mpQuoi" value="tout" id="mpTout"> <span>Tout mon carnet (<span id="mpNbT"></span>)</span></label>
+    </div>
+    <label class="ck" id="mpAfaireWrap"><input type="checkbox" id="mpAfaire" checked> <span>Inclure les cabanes que je n'ai pas encore faites <span class="hint">(affichées « pas encore testée »)</span></span></label>
+    <label class="ck"><input type="checkbox" id="mpPhotos" checked> <span>Inclure les photos <span class="hint" id="mpTaille"></span></span></label>
+    <label class="ck"><input type="checkbox" id="mpPerso" checked> <span>Inclure mes notes (ressenti, critères) et mes avis datés</span></label>
+    <label class="ck"><input type="checkbox" id="mpComs" checked> <span>Inclure le texte de mes avis</span></label>
+    <label class="ck"><input type="checkbox" id="mpPrive"> <span>Inclure mes notes privées</span></label>
+    <div class="f"><label for="mpNom">Ton prénom ou pseudo (affiché comme auteur)</label><input id="mpNom" placeholder="Prénom"></div>
+    <div id="mpSite" style="display:grid;gap:10px">
+      <div class="f"><label for="mpContact">Adresse e-mail de contact <small>(reçoit les propositions et signalements)</small></label><input id="mpContact" type="email" placeholder="toi@exemple.fr"></div>
+      <details><summary class="lab" style="cursor:pointer">Tes réseaux (facultatif)</summary>
+        <div style="display:grid;gap:8px;margin-top:8px">
+          <div class="f"><label for="mp-discord">Lien d'invitation Discord</label><input id="mp-discord" placeholder="https://discord.gg/…"></div>
+          <div class="f"><label for="mp-instagram">Instagram</label><input id="mp-instagram" placeholder="https://instagram.com/…"></div>
+          <div class="f"><label for="mp-youtube">YouTube</label><input id="mp-youtube" placeholder="https://youtube.com/@…"></div>
+        </div></details>
+      <p class="hint warn" id="mpSiteWarn" hidden></p>
+    </div>
+    <p class="hint" id="mpAide">Tu obtiens un fichier .html à envoyer par WhatsApp, mail ou Drive. On l'ouvre dans un navigateur : la carte s'affiche avec tes cabanes. « Avec qui » n'est jamais partagé.</p>
+    <div class="modal-actions">
+      <button class="btn ghost" type="button" id="mpTexte">Copier la fiche en texte</button>
+      <span class="grow"></span>
+      <button class="btn ghost" type="button" id="mpAnnuler">Annuler</button>
+      <button class="btn primary" type="button" id="mpCreer">Créer le fichier</button>
+    </div>
+  </div>
+</div>
+<div class="modal" id="modal3d" hidden>
+  <div class="modal-box m3d" role="dialog" aria-modal="true" aria-labelledby="m3dTitre">
+    <div class="m3d-h"><h3 id="m3dTitre">Vue 3D · <span id="m3dNom"></span></h3><span class="grow"></span>
+      <div class="seg" id="m3dFond" role="group" aria-label="Fond de la vue 3D"><button type="button" data-f="ortho" class="on">Vue aérienne</button><button type="button" data-f="topo">Carte topo</button></div>
+      <button class="btn soft icon" type="button" id="m3dFermer" aria-label="Fermer la vue 3D"><svg><use href="#i-x"/></svg></button></div>
+    <div class="m3d-map"><div id="map3d"></div><p class="m3d-msg" id="m3dMsg"></p></div>
+    <div class="m3d-f"><span class="hint">Clic droit (ou deux doigts) pour pivoter et incliner. Relief légèrement exagéré. Vue aérienne IGN : France uniquement.</span><span class="grow"></span>
+      <a class="btn ghost sm" id="m3dGM" target="_blank" rel="noopener">Google Maps ↗</a><a class="btn ghost sm" id="m3dGE" target="_blank" rel="noopener">Google Earth ↗</a></div>
+  </div>
+</div>
+<div class="modal" id="modalBienvenue" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="mbTitre">
+    <h3 id="mbTitre">Bienvenue</h3>
+    <div id="bienvenueCorps" class="info-corps"></div>
+    <div class="modal-actions" id="bienvenueActions"></div>
+  </div>
+</div>
+<div class="toast" id="toast" hidden role="status"></div>
+
