@@ -9,6 +9,8 @@ coin culture, guide du débutant. Un site communautaire créé par Corantinoo.
    Choisis ce dépôt, nom du projet `lebontoit` (l'adresse sera `lebontoit.pages.dev`).
    - Commande de construction : `python3 build.py`
    - Dossier de sortie : `dist`
+   - Si Cloudflare propose plutôt un projet « Workers » : commande de construction `python3 build.py`,
+     commande de déploiement `npx wrangler deploy` (les réglages sont dans `wrangler.jsonc`).
 2. **Coordonnées** : mets l'adresse e-mail du site dans `data/site.json` (c'est là qu'arrivent avis, photos et signalements).
 3. **Protection** : sur GitHub, *Settings* > *Branches* > ajoute une règle pour `main` : fusion par pull request seulement,
    vérification « Vérifier le site » obligatoire.

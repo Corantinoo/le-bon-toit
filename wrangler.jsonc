@@ -1,0 +1,9 @@
+// Réglages Cloudflare Workers : le site est statique, Cloudflare sert simplement le dossier dist/
+// construit par « python3 build.py ».
+{
+  "name": "lebontoit",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    "directory": "./dist"
+  }
+}
