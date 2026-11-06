@@ -1,7 +1,14 @@
 {
  "_aide": "Coordonnées affichées dans « À propos » et adresse où arrivent les contributions. Laisse vide ce que tu n'as pas encore.",
  "auteur": "Corantinoo",
- "contact": "",
+ "contact": "corantin.drm@gmail.com",
  "formulaire": "",
- "liens": {"discord": "", "instagram": "", "youtube": "", "facebook": "", "strava": "", "site": ""}
+ "liens": {
+  "discord": "",
+  "instagram": "",
+  "youtube": "",
+  "facebook": "",
+  "strava": "",
+  "site": ""
+ }
 }
