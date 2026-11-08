@@ -5,6 +5,7 @@
   "compatibility_date": "2026-11-01",
   "workers_dev": true,      // adresse publique lebontoit.<compte>.workers.dev
   "preview_urls": true,     // une adresse d'aperçu pour chaque modification proposée
+  "previews": {},           // requis par « npx wrangler preview », la commande qui publie ces aperçus
   "assets": {
     "directory": "./dist"
   }
