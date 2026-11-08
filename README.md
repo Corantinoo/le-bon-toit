@@ -5,12 +5,11 @@ coin culture, guide du débutant. Un site communautaire créé par Corantinoo.
 
 ## Mise en ligne (une seule fois)
 
-1. **Cloudflare** : crée un compte gratuit sur cloudflare.com, puis *Workers & Pages* > *Créer* > *Pages* > *Connecter à Git*.
-   Choisis ce dépôt, nom du projet `lebontoit` (l'adresse sera `lebontoit.pages.dev`).
+1. **Cloudflare** : le site est un projet *Workers* nommé `lebontoit`, relié à ce dépôt (réglages dans `wrangler.jsonc`).
    - Commande de construction : `python3 build.py`
-   - Dossier de sortie : `dist`
-   - Si Cloudflare propose plutôt un projet « Workers » : commande de construction `python3 build.py`,
-     commande de déploiement `npx wrangler deploy` (les réglages sont dans `wrangler.jsonc`).
+   - Commande de déploiement : `npx wrangler deploy` (branche `main`)
+   - Commande des aperçus : `npx wrangler preview` (autres branches)
+   - Adresse publique : `lebontoit.<sous-domaine du compte>.workers.dev`, visible dans Cloudflare > `lebontoit` > *Settings* > *Domains & Routes*.
 2. **Coordonnées** : mets l'adresse e-mail du site dans `data/site.json` (c'est là qu'arrivent avis, photos et signalements).
 3. **Protection** : sur GitHub, *Settings* > *Branches* > ajoute une règle pour `main` : fusion par pull request seulement,
    vérification « Vérifier le site » obligatoire.
