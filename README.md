@@ -9,7 +9,8 @@ coin culture, guide du débutant. Un site communautaire créé par Corantinoo.
    - Commande de construction : `python3 build.py`
    - Commande de déploiement : `npx wrangler deploy` (branche `main`)
    - Commande des aperçus : `npx wrangler preview` (autres branches)
-   - Adresse publique : `lebontoit.<sous-domaine du compte>.workers.dev`, visible dans Cloudflare > `lebontoit` > *Settings* > *Domains & Routes*.
+   - Adresse publique : https://lebontoit.corantin-drm.workers.dev (Cloudflare > `lebontoit` > *Settings* > *Domains & Routes*).
+   - Aperçu d'une pull request : `https://<nom-de-branche>-lebontoit.corantin-drm.workers.dev`, donné en commentaire par Cloudflare.
 2. **Coordonnées** : mets l'adresse e-mail du site dans `data/site.json` (c'est là qu'arrivent avis, photos et signalements).
 3. **Protection** : sur GitHub, *Settings* > *Branches* > ajoute une règle pour `main` : fusion par pull request seulement,
    vérification « Vérifier le site » obligatoire.
