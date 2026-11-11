@@ -511,6 +511,7 @@ function rendre(){
       <div class="feats">${tagStatut(c)}${c.statut==="afaire"&&c.envie?etoiles(c.envie):""}${feats(c)}${c.exemple?'<span class="tag ex">exemple</span>':""}</div>
     </div>`).join("");
   if (vueCourante === "detail") rendreDetail();
+  majCabanes3D();
   if (!$("#pageClassement").hidden) rendreClassement();
   rendreBandeau();
 }
@@ -519,14 +520,17 @@ function majSelection(){
   marqueurs.forEach((m, id) => { const c = cabanes.find(x=>x.id===id); if (c){ m.setIcon(icone(c, id===selId)); m.setZIndexOffset(id===selId?500:0); } });
   majTrace();
 }
-function centrer(c, ouvrir=true){
-  if (!c || c.lat == null) return;
-  const z = Math.max(map.getZoom(), 14);
+function cibleCentree(c, z){
   let cible = L.latLng(c.lat, c.lng);
   if (innerWidth <= 760 && !$("#panel").classList.contains("closed")){   /* sur mobile, garder le repère au-dessus du tiroir */
     const pt = map.project(cible, z).add([0, map.getSize().y * 0.3]); cible = map.unproject(pt, z);
   }
-  map.flyTo(cible, z, {duration:.6});
+  return cible;
+}
+function centrer(c, ouvrir=true){
+  if (!c || c.lat == null) return;
+  const z = Math.max(map.getZoom(), 14);
+  map.flyTo(cibleCentree(c, z), z, {duration:.6});
   if (ouvrir) setTimeout(() => marqueurs.get(c.id)?.openPopup(), 650);
 }
 function majTrace(){
@@ -576,6 +580,7 @@ function montrerVue(v){
   vueCourante = v;
   if (v !== "liste" && $("#pageCarte").classList.contains("replie")) replierListe(false);
   for (const [nom, id] of Object.entries(VUES)) $(id).hidden = (nom !== v);
+  if (v !== "detail" && en3D) quitter3D();   /* le relief accompagne la fiche ; liste, itinéraire et édition restent en 2D */
   if (v !== "liste") $("#panel").classList.remove("closed");
   majTrace(); majHash();
 }
@@ -584,7 +589,10 @@ $("#detailBack").addEventListener("click", () => montrerVue("liste"));
 /* ---- Détail ---- */
 function ouvrirDetail(id, voler){
   selId = id; montrerVue("detail"); rendreDetail(); majSelection(); majHash();
-  if (voler) centrer(cabanes.find(x=>x.id===id), false);
+  const c = cabanes.find(x=>x.id===id);
+  /* la 3D s'ouvre d'elle-même avec la fiche (réglable dans Mon carnet) ; sinon, ou si elle échoue, la carte 2D se centre */
+  if (c && c.lat != null && (en3D || auto3D())) entrer3D(c).then(ok => { if (!ok && voler) centrer(c, false); });
+  else if (voler) centrer(c, false);
   $("#vueDetail .scroll").scrollTop = 0;
 }
 const vignettes = ids => ids.map(id => { const p = photosDB.get(id); return p ? `<button type="button" class="vig" data-ph="${esc(id)}" aria-label="Voir la photo"><img src="${p.thumb}" alt=""></button>` : ""; }).join("");
@@ -704,7 +712,6 @@ function rendreDetail(){
       <button class="btn ghost partage-only" type="button" id="dFav" aria-pressed="${fav}"><svg><use href="#${fav?"i-garde":"i-garder"}"/></svg>${fav?"Gardée":"Garder"}</button>
       <button class="btn ghost" type="button" id="dShare"><svg><use href="#i-share"/></svg>Partager</button>
       ${c.lien ? `<a class="btn ghost" href="${esc(c.lien)}" target="_blank" rel="noopener" title="Ouvrir la fiche ${esc(src)} dans un nouvel onglet">Fiche ${esc(src)} <span aria-hidden="true">↗</span></a>` : ""}
-      ${c.lat != null ? `<button class="btn ghost" type="button" id="d3D"><svg><use href="#i-sommet"/></svg>Vue 3D</button>` : ""}
     </div>
     ${c.lat != null ? `<p class="voir">Voir le point exact : <a href="${lienGoogleMaps(c)}" target="_blank" rel="noopener">Google Maps ↗</a> · <a href="${lienGoogleEarth(c)}" target="_blank" rel="noopener">Google Earth ↗</a></p>` : ""}
     ${c.statut==="afaire" && !modePartage ? `<div class="blk"><h4>Mon envie</h4><div>${c.envie?etoiles(c.envie):'<span class="hint">Pas encore notée</span>'}</div></div>` : ""}
@@ -735,7 +742,6 @@ function rendreDetail(){
   $("#dShare").onclick = () => modePartage ? partagerLien(c) : ouvrirPartage("une", c.id);
   $("#dSignal").onclick = () => signalerEtat(c);
   $("#dAvis").onclick = () => donnerAvis(c);
-  if ($("#d3D")) $("#d3D").onclick = () => ouvrir3D(c);
   $("#detail").querySelectorAll("[data-avdel],[data-sigdel]").forEach(b => b.onclick = () => {
     if (!b.classList.contains("arm")){ b.classList.add("arm"); b.textContent = "Confirmer ?"; return; }
     if (b.dataset.avdel) retirerContribFiche(c, "avisV", b.dataset.avdel); else retirerContribFiche(c, "sigV", b.dataset.sigdel);
@@ -1330,6 +1336,7 @@ function allerPage(p){
   if (!PAGES[p]) p = "carte";
   const change = p !== pageCourante;
   pageCourante = p;
+  if (p !== "carte" && en3D) quitter3D();
   document.querySelectorAll("#tabs .nav").forEach(b => { const on = b.dataset.page === p; b.classList.toggle("on", on); if (on) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); });
   for (const [k, sel] of Object.entries(PAGES)) $(sel).hidden = k !== p;
   if (p === "classement") rendreClassement();
@@ -1353,55 +1360,206 @@ function routerHash(){
 }
 window.addEventListener("hashchange", routerHash);
 
-/* ================= Vue 3D (MapLibre, chargée seulement à la demande) ================= */
-const ML_VER = "4.7.1";
-let mlPromesse = null, map3d = null, fond3d = "ortho", cab3d = null;
-function chargerMapLibre(){
-  if (window.maplibregl) return Promise.resolve();
-  return mlPromesse || (mlPromesse = new Promise((res, rej) => {
-    const l = document.createElement("link"); l.rel = "stylesheet"; l.href = `https://unpkg.com/maplibre-gl@${ML_VER}/dist/maplibre-gl.css`; document.head.appendChild(l);
-    const sc = document.createElement("script"); sc.src = `https://unpkg.com/maplibre-gl@${ML_VER}/dist/maplibre-gl.js`;
-    sc.onload = () => window.maplibregl ? res() : rej(new Error("maplibre")); sc.onerror = () => { mlPromesse = null; sc.remove(); rej(new Error("maplibre")); };
-    document.head.appendChild(sc);
-  }));
-}
+/* ================= Relief en 3D (MapLibre, hébergé sur le site, chargé seulement à la demande) =================
+   La carte 2D (Leaflet) sert à chercher. Quand on ouvre une cabane, la carte se soulève en 3D au-dessus d'elle :
+   on part de l'endroit affiché, on vole jusqu'à la cabane (environ 1 s), on incline. On revient en 2D en fermant la fiche
+   ou avec « Revenir en 2D ». Les variables d'état sont en « var » : rendre() peut les lire avant que cette partie s'exécute. */
+const ML_VER = "5.24.1";
 const lienGoogleMaps = c => `https://www.google.com/maps/search/?api=1&query=${c.lat.toFixed(5)},${c.lng.toFixed(5)}`;
 const lienGoogleEarth = c => `https://earth.google.com/web/@${c.lat.toFixed(5)},${c.lng.toFixed(5)},${Math.round(c.alt||1500)}a,1800d,35y,0h,65t,0r`;
+var KEY_ANIM = "le-bon-toit-animations", KEY_AUTO3D = "le-bon-toit-3d-auto", KEY_FOND3D = "le-bon-toit-fond-3d";
+var peutFaire3D = "WebGL2RenderingContext" in window;
+var m3 = null, en3D = false, jeton3D = 0, pin3 = null, bulle3 = null;
+let mlPromesse = null, fond3d = lsGet(KEY_FOND3D) === "carte" ? "carte" : "photo";
+function animationsReduites(){ return lsGet(KEY_ANIM) === "reduites" || matchMedia("(prefers-reduced-motion: reduce)").matches; }
+function auto3D(){ return peutFaire3D && lsGet(KEY_AUTO3D) !== "non" && !(navigator.connection && navigator.connection.saveData); }
+const pause = ms => new Promise(r => setTimeout(r, ms));
+
+function chargerScript(src){
+  return new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = () => { s.remove(); rej(new Error(src)); }; document.head.appendChild(s); });
+}
+function chargerMapLibre(){
+  if (window.maplibregl) return Promise.resolve();
+  return mlPromesse || (mlPromesse = (async () => {
+    /* d'abord la copie du site ; unpkg en secours (carnet ouvert depuis un fichier) */
+    for (const base of ["vendor/maplibre/", `https://unpkg.com/maplibre-gl@${ML_VER}/dist/`]){
+      try {
+        await chargerScript(base + "maplibre-gl.js");
+        if (!window.maplibregl) continue;
+        const l = document.createElement("link"); l.rel = "stylesheet"; l.href = base + "maplibre-gl.css"; document.head.appendChild(l);
+        return;
+      } catch(e){}
+    }
+    mlPromesse = null; throw new Error("maplibre");
+  })());
+}
+
+/* Hauteur du soleil (en degrés) à un endroit et un instant : formule simplifiée, précise à un degré près, assez pour colorer le ciel */
+function hauteurSoleil(lat, lng, d = new Date()){
+  const r = Math.PI / 180, j = d / 864e5 - 10957.5;
+  const M = (357.529 + .98560028 * j) * r, Ls = (280.459 + .98564736 * j + 1.915 * Math.sin(M) + .02 * Math.sin(2 * M)) * r;
+  const e = 23.439 * r, dec = Math.asin(Math.sin(e) * Math.sin(Ls)), ra = Math.atan2(Math.cos(e) * Math.sin(Ls), Math.cos(Ls));
+  const H = (280.46061837 + 360.98564736629 * j + lng) * r - ra;
+  return Math.asin(Math.sin(lat * r) * Math.sin(dec) + Math.cos(lat * r) * Math.cos(dec) * Math.cos(H)) / r;
+}
+/* Le ciel suit l'heure réelle, la même pour tout le monde : jour, heure dorée, nuit */
+function ciel3D(lat, lng){
+  const h = hauteurSoleil(lat, lng);
+  const [ciel, horizon, brume] = h > 8 ? ["#8DB6D9", "#E4ECEE", "#E4ECEE"] : h > -4 ? ["#6E83A6", "#F1C38E", "#DDB896"] : h > -10 ? ["#2B3A5C", "#B9876A", "#55546A"] : ["#0B1424", "#26354F", "#1A2438"];
+  return {"sky-color":ciel, "horizon-color":horizon, "fog-color":brume, "sky-horizon-blend":.6, "horizon-fog-blend":.5, "fog-ground-blend":.75, "atmosphere-blend":.8};
+}
+const DEM_URL = "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png";
 function style3d(){
+  const raster = (tiles, maxzoom, attribution) => ({type:"raster", tiles, tileSize:256, maxzoom, attribution});
   return {version:8,
     sources:{
-      ortho:{type:"raster", tiles:[ign("ORTHOIMAGERY.ORTHOPHOTOS","image/jpeg")], tileSize:256, maxzoom:19, attribution:"© IGN Géoplateforme"},
-      topo:{type:"raster", tiles:["a","b","c"].map(sd => "https://" + sd + ".tile.opentopomap.org/{z}/{x}/{y}.png"), tileSize:256, maxzoom:17, attribution:"© contributeurs OpenStreetMap, SRTM · © OpenTopoMap (CC BY-SA)"},
-      dem:{type:"raster-dem", tiles:["https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"], tileSize:256, maxzoom:15, encoding:"terrarium", attribution:"Relief : Terrain Tiles (AWS Open Data)"}
+      pnoa: raster(["https://www.ign.es/wmts/pnoa-ma?request=GetTile&service=WMTS&VERSION=1.0.0&Layer=OI.OrthoimageCoverage&Style=default&Format=image/jpeg&TileMatrixSet=GoogleMapsCompatible&TileMatrix={z}&TileRow={y}&TileCol={x}"], 19, "© IGN España (PNOA)"),
+      ortho: raster([ign("ORTHOIMAGERY.ORTHOPHOTOS","image/jpeg")], 19, "© IGN Géoplateforme"),
+      topo: raster(["a","b","c"].map(sd => `https://${sd}.tile.opentopomap.org/{z}/{x}/{y}.png`), 17, "© contributeurs OpenStreetMap, SRTM · © OpenTopoMap (CC BY-SA)"),
+      sentiers: raster(["https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png"], 18, "sentiers © Waymarked Trails"),
+      dem: {type:"raster-dem", tiles:[DEM_URL], tileSize:256, maxzoom:15, encoding:"terrarium", attribution:"Relief : Terrain Tiles (AWS Open Data)"},
+      demOmbre: {type:"raster-dem", tiles:[DEM_URL], tileSize:256, maxzoom:15, encoding:"terrarium"}
     },
-    layers:[{id:"fond", type:"raster", source:fond3d}, {id:"ombrage", type:"hillshade", source:"dem", paint:{"hillshade-exaggeration":.25}}],
-    terrain:{source:"dem", exaggeration:1.3}};
+    layers:[
+      /* photo : l'Espagne dessous, la France (IGN) par-dessus */
+      {id:"pnoa", type:"raster", source:"pnoa", layout:{visibility: fond3d === "photo" ? "visible" : "none"}},
+      {id:"ortho", type:"raster", source:"ortho", layout:{visibility: fond3d === "photo" ? "visible" : "none"}},
+      {id:"topo", type:"raster", source:"topo", layout:{visibility: fond3d === "carte" ? "visible" : "none"}},
+      {id:"ombrage", type:"hillshade", source:"demOmbre", layout:{visibility: fond3d === "carte" ? "visible" : "none"}, paint:{"hillshade-exaggeration":.3}},
+      {id:"sentiers", type:"raster", source:"sentiers", paint:{"raster-opacity":.85}}
+    ],
+    terrain:{source:"dem", exaggeration:1},   /* relief à l'échelle réelle, sans exagération */
+    sky: ciel3D(42.8, 0.3)};
 }
-async function ouvrir3D(c){
-  if (!c || c.lat == null) return;
-  cab3d = c;
-  $("#m3dNom").textContent = c.nom; $("#m3dGM").href = lienGoogleMaps(c); $("#m3dGE").href = lienGoogleEarth(c);
-  document.querySelectorAll("#m3dFond button").forEach(b => b.classList.toggle("on", b.dataset.f === fond3d));
-  const msg = $("#m3dMsg"); msg.textContent = "Chargement de la vue 3D…"; msg.hidden = false;
-  $("#modal3d").hidden = false; setTimeout(() => $("#m3dFermer").focus(), 30);
-  try { await chargerMapLibre(); }
-  catch(e){ msg.textContent = "La vue 3D a besoin d'une connexion internet. Tu peux ouvrir le point exact dans Google Maps ou Google Earth, en bas."; return; }
-  if ($("#modal3d").hidden || cab3d !== c) return;
-  if (map3d){ map3d.remove(); map3d = null; }
-  try {
-    map3d = new maplibregl.Map({container:"map3d", style:style3d(), center:[c.lng, c.lat], zoom:14.3, pitch:68, bearing:-25, maxPitch:80, attributionControl:{compact:true}});
-    map3d.addControl(new maplibregl.NavigationControl({visualizePitch:true}), "top-right");
-    new maplibregl.Marker({color:"#B5751F"}).setLngLat([c.lng, c.lat]).setPopup(new maplibregl.Popup({offset:28}).setText(c.nom + (c.alt != null ? " · " + fmtAlt(c.alt) : ""))).addTo(map3d);
-    map3d.once("load", () => { msg.hidden = true; });
-    setTimeout(() => { if (msg.textContent.startsWith("Chargement")) msg.hidden = true; }, 6000);
-  } catch(e){ msg.textContent = "Ton navigateur ne peut pas afficher la 3D (WebGL désactivé ?). Utilise Google Maps ou Google Earth, en bas."; }
+const valeurCss = v => v.startsWith("var(") ? getComputedStyle(document.documentElement).getPropertyValue(v.slice(4, -1)).trim() || "#B5751F" : v;
+function geoCabanes3D(){
+  return {type:"FeatureCollection", features:[...marqueurs.keys()].map(id => cabanes.find(c => c.id === id)).filter(c => c && c.lat != null)
+    .map(c => ({type:"Feature", properties:{id:c.id, nom:c.nom, coul:valeurCss(couleur(c))}, geometry:{type:"Point", coordinates:[c.lng, c.lat]}}))};
 }
-function fermer3D(){ $("#modal3d").hidden = true; cab3d = null; if (map3d){ map3d.remove(); map3d = null; } }
-$("#m3dFermer").addEventListener("click", fermer3D);
-$("#modal3d").addEventListener("click", e => { if (e.target.id === "modal3d") fermer3D(); });
-$("#m3dFond").addEventListener("click", e => { const b = e.target.closest("[data-f]"); if (!b) return; fond3d = b.dataset.f;
-  document.querySelectorAll("#m3dFond button").forEach(x => x.classList.toggle("on", x === b));
-  if (map3d && map3d.getLayer("fond")){ map3d.removeLayer("fond"); map3d.addLayer({id:"fond", type:"raster", source:fond3d}, "ombrage"); } });
+function majCabanes3D(){ if (m3 && m3.getSource("cab")) m3.getSource("cab").setData(geoCabanes3D()); }
+function creerCarte3D(){
+  m3 = new maplibregl.Map({container:"carte3d", style:style3d(), center:[0.15, 42.85], zoom:8, maxPitch:75, attributionControl:{compact:true}, cooperativeGestures:false});
+  m3.addControl(new maplibregl.NavigationControl({visualizePitch:true}), "top-right");
+  m3.on("load", () => {
+    m3.addSource("cab", {type:"geojson", data:geoCabanes3D()});
+    m3.addLayer({id:"cab", type:"circle", source:"cab", paint:{"circle-radius":["interpolate",["linear"],["zoom"],8,4,13,7], "circle-color":["get","coul"], "circle-stroke-color":"#fff", "circle-stroke-width":2}});
+  });
+  m3.on("click", "cab", e => { const f = e.features && e.features[0]; if (f) ouvrirDetail(f.properties.id, true); });
+  m3.on("mouseenter", "cab", e => { m3.getCanvas().style.cursor = "pointer"; const f = e.features[0];
+    if (!bulle3) bulle3 = new maplibregl.Popup({closeButton:false, closeOnClick:false, offset:10});
+    bulle3.setLngLat(f.geometry.coordinates).setText(f.properties.nom).addTo(m3); });
+  m3.on("mouseleave", "cab", () => { m3.getCanvas().style.cursor = ""; if (bulle3) bulle3.remove(); });
+  m3.on("error", () => {});   /* une tuile manquante (hors ligne, hors couverture) ne doit rien casser */
+}
+/* Attendre que les premières tuiles soient là, sans jamais bloquer plus de « max » ms */
+const attendre3D = max => new Promise(r => { if (m3.loaded() && m3.areTilesLoaded()) return r(); const t = setTimeout(r, max); m3.once("idle", () => { clearTimeout(t); r(); }); });
+const margeTiroir = () => innerWidth <= 760 && !$("#panel").classList.contains("closed")
+  ? {top:40, left:0, right:0, bottom:Math.round($("#carte3d").clientHeight * .5)} : {top:40, left:0, right:0, bottom:0};
+function capVers(c){
+  const o = m3.getCenter(), dx = (c.lng - o.lng) * Math.cos(c.lat * Math.PI / 180), dy = c.lat - o.lat;
+  return Math.hypot(dx, dy) < .02 ? (m3.getBearing() || -20) : Math.atan2(dx, dy) * 180 / Math.PI;
+}
+/* le ciel se règle sur l'heure et l'endroit ; si le style n'est pas encore prêt, on le fera à son chargement */
+function majCiel3D(lat, lng){ if (m3.isStyleLoaded()) m3.setSky(ciel3D(lat, lng)); else m3.once("load", () => m3.setSky(ciel3D(lat, lng))); }
+/* D'où regarder la cabane ? On teste 16 directions et on place la caméra du côté le plus bas (la vallée),
+   pour qu'aucune crête ne cache la cabane. Le relief doit être chargé : sinon, on garde le cap actuel. */
+function meilleurCap(c){
+  const altC = m3.queryTerrainElevation([c.lng, c.lat]);
+  if (altC == null) return null;
+  const kx = 1 / (111320 * Math.cos(c.lat * Math.PI / 180)), ky = 1 / 110540, actuel = m3.getBearing();
+  let meilleur = null, scoreMin = Infinity;
+  for (let i = 0; i < 16; i++){
+    const cap = i * 22.5 - 180, r = (cap + 180) * Math.PI / 180;   /* la caméra est derrière : à l'opposé du cap */
+    let pire = -Infinity, n = 0;
+    for (const dist of [300, 700, 1200, 2000, 3000, 4200]){
+      const z = m3.queryTerrainElevation([c.lng + Math.sin(r) * dist * kx, c.lat + Math.cos(r) * dist * ky]);
+      if (z == null) continue;
+      n++; pire = Math.max(pire, (z - altC) / dist);   /* pente vue depuis la cabane : plus elle monte, plus elle cache */
+    }
+    if (!n) continue;
+    const tour = Math.abs(((cap - actuel + 540) % 360) - 180) / 180;   /* à vue égale, on tourne le moins possible */
+    const score = pire + tour * .08;
+    if (score < scoreMin){ scoreMin = score; meilleur = {cap, pente:pire}; }
+  }
+  return meilleur;
+}
+/* Inclinaison : assez plongeante pour passer au-dessus du relief qui reste devant la cabane */
+const inclinaison3D = pente => Math.max(35, Math.min(innerWidth <= 760 ? 56 : 62, 90 - (Math.atan(Math.max(0, pente)) * 180 / Math.PI + 8)));
+function survoler3D(c){
+  const d = animationsReduites() ? 0 : 1000, j = jeton3D, pitch = innerWidth <= 760 ? 56 : 62;
+  majCiel3D(c.lat, c.lng);
+  m3.flyTo({center:[c.lng, c.lat], zoom:13.6, pitch, bearing:capVers(c), padding:margeTiroir(), duration:d, curve:1.3, essential:true});
+  /* une fois arrivé et le relief chargé : on se recale sur la cabane et on tourne vers le meilleur point de vue */
+  setTimeout(() => attendre3D(5000).then(() => {
+    if (j !== jeton3D || !en3D || selId !== c.id) return;
+    const vue = meilleurCap(c);
+    m3.easeTo({center:[c.lng, c.lat], bearing:vue ? vue.cap : m3.getBearing(), pitch:vue ? inclinaison3D(vue.pente) : pitch,
+      padding:margeTiroir(), duration:animationsReduites() ? 0 : 1400, essential:true});
+  }), d + 50);
+  const el = document.createElement("div"); el.className = "pin3d"; el.innerHTML = `<span>${esc(c.nom)}</span><i></i><b></b>`;
+  if (pin3) pin3.remove();
+  pin3 = new maplibregl.Marker({element:el, anchor:"bottom", offset:[0, 6]}).setLngLat([c.lng, c.lat]).addTo(m3);
+}
+/* c : cabane à survoler ; sans cabane, on incline simplement la vue affichée. Renvoie false si la 3D n'a pas pu s'ouvrir. */
+async function entrer3D(c){
+  if (!peutFaire3D) return false;
+  const j = ++jeton3D;
+  try { await chargerMapLibre(); } catch(e){ toast("Le relief en 3D a besoin d'une connexion internet."); return false; }
+  if (j !== jeton3D) return false;
+  try { if (!m3) creerCarte3D(); } catch(e){ m3 = null; toast("Ton navigateur ne peut pas afficher le relief en 3D."); return false; }
+  const box = $("#carte3d");
+  if (!en3D){
+    const ce = map.getCenter();
+    box.hidden = false; m3.resize();
+    m3.jumpTo({center:[ce.lng, ce.lat], zoom:map.getZoom() - 1, pitch:0, bearing:0, padding:{top:0, left:0, right:0, bottom:0}});
+    majCiel3D(ce.lat, ce.lng);
+    en3D = true; $("#mapWrap").classList.add("en3d"); $("#barre3d").hidden = false; majBoutons3D();
+    await attendre3D(1500);
+    if (j !== jeton3D) return false;
+    box.classList.add("vu");
+  }
+  if (c) survoler3D(c);
+  else m3.easeTo({pitch:55, bearing:-15, duration:animationsReduites() ? 0 : 900, essential:true});
+  return true;
+}
+async function quitter3D(){
+  if (!en3D || !m3) return;
+  const j = ++jeton3D, d = animationsReduites() ? 0 : 450;
+  m3.easeTo({pitch:0, bearing:0, duration:d, essential:true});
+  await pause(d + 20);
+  if (j !== jeton3D) return;
+  const ce = m3.getCenter(), c = vueCourante === "detail" && cabanes.find(x => x.id === selId);
+  map.setView([ce.lat, ce.lng], Math.round(m3.getZoom() + 1), {animate:false});
+  if (c && c.lat != null) map.setView(cibleCentree(c, map.getZoom()), map.getZoom(), {animate:false});
+  en3D = false; $("#mapWrap").classList.remove("en3d"); $("#barre3d").hidden = true; majBoutons3D();
+  const box = $("#carte3d"); box.classList.remove("vu");
+  setTimeout(() => { if (!en3D) box.hidden = true; }, d ? 260 : 0);
+}
+function majBoutons3D(){
+  const b = $("#btn3D"); if (b) b.closest(".ctrl3d").hidden = en3D;
+  document.querySelectorAll("#fond3d [data-f3]").forEach(x => x.classList.toggle("on", x.dataset.f3 === fond3d));
+}
+if (peutFaire3D){
+  const Ctrl3D = L.Control.extend({options:{position:"topright"}, onAdd(){
+    const d = L.DomUtil.create("div", "leaflet-bar ctrl3d");
+    d.innerHTML = `<button type="button" id="btn3D" title="Voir le relief en 3D" aria-label="Voir le relief en 3D">3D</button>`;
+    L.DomEvent.disableClickPropagation(d);
+    d.firstChild.addEventListener("click", () => entrer3D(vueCourante === "detail" ? cabanes.find(x => x.id === selId) : null));
+    return d; }});
+  map.addControl(new Ctrl3D());
+  /* une fois la page tranquille, on prépare MapLibre en cache (depuis le site) pour que la première fiche s'envole sans attendre */
+  if (auto3D()) addEventListener("load", () => setTimeout(() => (window.requestIdleCallback || setTimeout)(() => chargerMapLibre().catch(() => {})), 4000));
+}
+$("#btn2D").addEventListener("click", quitter3D);
+$("#fond3d").addEventListener("click", e => {
+  const b = e.target.closest("[data-f3]"); if (!b) return;
+  fond3d = b.dataset.f3; lsSet(KEY_FOND3D, fond3d); majBoutons3D();
+  if (m3 && m3.getLayer("topo")){
+    ["pnoa","ortho"].forEach(id => m3.setLayoutProperty(id, "visibility", fond3d === "photo" ? "visible" : "none"));
+    ["topo","ombrage"].forEach(id => m3.setLayoutProperty(id, "visibility", fond3d === "carte" ? "visible" : "none"));
+  }
+});
+majBoutons3D();
 
 /* ================= refuges.info ================= */
 const riCalque = L.layerGroup().addTo(map);
@@ -1756,7 +1914,7 @@ document.addEventListener("keydown", e => {
   if (!$("#lb").hidden){ if (e.key === "Escape") fermerLightbox(); else if (e.key === "ArrowLeft"){ lbIdx--; majLightbox(); } else if (e.key === "ArrowRight"){ lbIdx++; majLightbox(); } return; }
   if (e.key !== "Escape") return;
   if (placementProp) finPlacementProp(null);
-  else if (!$("#modal3d").hidden) fermer3D();
+  else if (en3D && vueCourante !== "detail") quitter3D();
   else if (!$("#modalBienvenue").hidden){ lsSet(KEY_BV,"1"); $("#modalBienvenue").hidden = true; }
   else if (!$("#modalPartage").hidden) fermerPartage();
   else if (vueCourante === "fiche") fermerFiche(); else if (vueCourante === "retour") annulerRetour();
@@ -2168,6 +2326,9 @@ function rendreProfil(){
       : `<p class="hint">Pas encore de favori. Ouvre la fiche d'une cabane et clique sur « Garder ».</p>`}</section>
     <section class="prof-sec"><h2>Mes contributions</h2>${historique.length ? `<ul class="hist">${historique.slice(0, 30).map(h => `<li><b>${TYPES_H[h.t] || "Contribution"}</b> · ${esc(h.sur || "")} <small>${h.date ? fmtDate(h.date) : ""}</small></li>`).join("")}</ul>`
       : `<p class="hint">Rien d'envoyé pour l'instant. <button class="linkbtn" type="button" data-page="participer">Participer au carnet</button></p>`}</section>
+    <section class="prof-sec"><h2>Réglages de la carte</h2><p class="hint">Gardés sur cet appareil.</p>
+      ${peutFaire3D ? `<label class="ck"><input type="checkbox" id="pfAuto3d"${lsGet(KEY_AUTO3D) !== "non" ? " checked" : ""}> Ouvrir le relief en 3D avec chaque fiche de cabane</label>` : ""}
+      <label class="ck"><input type="checkbox" id="pfAnim"${lsGet(KEY_ANIM) === "reduites" ? " checked" : ""}> Réduire les animations : la carte va directement à la cabane, sans voler</label></section>
     <section class="prof-sec"><h2>Sauvegarder mon profil</h2><p class="hint">Pour le retrouver sur un autre appareil ou après avoir vidé ton navigateur.</p>
       <div class="envoi"><button class="btn ghost" type="button" id="pfExport">Télécharger mon profil</button><label class="btn ghost" for="pfImport" tabindex="0">Restaurer un profil</label><input type="file" id="pfImport" accept=".json,application/json" hidden></div></section>`;
   $("#pfPseudo").onchange = e => { profil.pseudo = e.target.value.trim(); sauverProfil(); rendreProfil(); };
@@ -2175,6 +2336,8 @@ function rendreProfil(){
   const v = $("#medVecue"), r = $("#medRetirer");
   if (v) v.onclick = () => { profil.medailles[ms.id] = {date: $("#medDate").value || ""}; sauverProfil(); rendreProfil(); toast(`Médaille « ${ms.nom} » ajoutée`); };
   if (r) r.onclick = () => { delete profil.medailles[ms.id]; sauverProfil(); rendreProfil(); };
+  if ($("#pfAuto3d")) $("#pfAuto3d").onchange = e => { lsSet(KEY_AUTO3D, e.target.checked ? "oui" : "non"); toast(e.target.checked ? "Le relief s'ouvrira avec chaque fiche" : "Les fiches s'ouvriront sur la carte 2D (bouton 3D sur la carte)"); };
+  $("#pfAnim").onchange = e => { lsSet(KEY_ANIM, e.target.checked ? "reduites" : "normales"); toast(e.target.checked ? "Animations réduites" : "Animations normales"); };
   $("#pfExport").onclick = () => telecharger(`profil-${slug(profil.pseudo || "randonneur")}.json`, JSON.stringify({profil, historique, favoris:[...favoris]}, null, 1), "application/json");
   $("#pfImport").onchange = async e => { const f = e.target.files[0]; e.target.value = ""; if (!f) return;
     try { const d = JSON.parse(await f.text()); if (!d.profil) throw 0; profil = {pseudo:"", titre:"", medailles:{}, ...d.profil}; historique = d.historique || []; favoris = new Set(d.favoris || []);

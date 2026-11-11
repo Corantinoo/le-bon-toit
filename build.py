@@ -54,6 +54,8 @@ def main():
     photos = RACINE / "data/photos"
     if photos.exists():
         shutil.copytree(photos, dist / "photos")
+    # MapLibre (relief en 3D) est servi à côté de la page et chargé seulement quand on passe en 3D
+    shutil.copytree(RACINE / "vendor/maplibre", dist / "vendor/maplibre")
     for f in ("_headers", "robots.txt"):
         if (RACINE / "public" / f).exists():
             shutil.copy(RACINE / "public" / f, dist / f)
