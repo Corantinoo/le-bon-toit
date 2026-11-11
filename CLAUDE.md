@@ -25,6 +25,7 @@ Le site est **une seule page HTML autonome**, assemblée par `build.py` dans cet
 | `src/icones.html` | les icônes SVG (`<symbol id="i-…">`), utilisées par `<svg><use href="#i-…"/></svg>` |
 | `src/page.html` | la structure : menu (`#tabs`), en-tête, pages (`#pageCarte`, `#pageClassement`…), fenêtres modales |
 | `vendor/leaflet.js` | Leaflet 1.9.4. Ne pas modifier |
+| `vendor/maplibre/` | MapLibre GL 5.24.1 (licence BSD). Copié tel quel dans `dist/vendor/maplibre/`, chargé seulement au passage en 3D. Ne pas modifier |
 | `src/js/app.js` | toute l'application (JS sans dépendance, dans une IIFE en mode strict) |
 | `src/js/culture.js` | les textes du coin culture, insérés dans app.js à la place de `/*@@CULTURE@@*/` |
 | `data/publie.json` | les cabanes publiées (produit par `tools/importer_publication.py`, ne pas éditer à la main) |
@@ -38,7 +39,7 @@ Navigation par l'ancre : `#carte`, `#classement`, `#culture`, `#guide`, `#partic
 
 Repères dans `app.js` : `SITE` (configuration), `rendreDetail` (fiche), `rendreClassement`, `rendreCulture`, `rendreInfoJour`,
 `PART`/`envoyerPart` (Participer), `lireCode` (« À relire », codes `LBT1:…:LBT`), `MEDAILLES`/`rendreProfil`, `rendreGuide`,
-`rendreApropos`, `ouvrir3D` (MapLibre chargé à la demande), `demarrer`.
+`rendreApropos`, `entrer3D`/`quitter3D` (relief en 3D posé sur la carte, MapLibre chargé à la demande), `demarrer`.
 
 ## Règles à ne jamais casser
 
@@ -52,7 +53,7 @@ Repères dans `app.js` : `SITE` (configuration), `rendreDetail` (fiche), `rendre
    coordonnées révélées seulement après accord, prévenir un proche.
 4. **Modération.** Rien d'écrit par un visiteur (avis, photo, signalement, texte) n'apparaît sans validation de Corantin.
 5. **Autonomie de la page.** Pas de nouvelle dépendance chargée depuis un CDN au démarrage ; ce qui est lourd se charge à la demande
-   (comme MapLibre pour la 3D). Pas de framework, pas d'étape de compilation JS.
+   (comme MapLibre pour la 3D, servi depuis le site, unpkg seulement en secours pour le carnet ouvert depuis un fichier). Pas de framework, pas d'étape de compilation JS.
 6. **Accessibilité et mobile.** Tout doit marcher à 390 px de large, au clavier, et en thème sombre. Contraste lisible.
 7. **Compatibilité des données.** Les carnets existants (localStorage `carnet-cabanes-v1`, IndexedDB) doivent toujours se charger :
    toute évolution du format passe par `migrer()`.

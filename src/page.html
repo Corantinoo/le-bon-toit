@@ -280,6 +280,11 @@
 
         <div class="map-wrap" id="mapWrap">
           <div id="map" role="region" aria-label="Carte des cabanes"></div>
+          <div class="carte3d" id="carte3d" role="region" aria-label="Relief en 3D" hidden></div>
+          <div class="barre3d" id="barre3d" hidden>
+            <div class="seg" id="fond3d" role="group" aria-label="Fond du relief"><button type="button" data-f3="photo">Photo</button><button type="button" data-f3="carte">Carte</button></div>
+            <button class="btn soft sm" type="button" id="btn2D">Revenir en 2D</button>
+          </div>
           <button class="btn-liste" type="button" id="btnListe" aria-controls="panel"></button>
           <div id="infoJourBox"></div>
           <div class="placing-banner" id="placing" hidden></div>
@@ -558,16 +563,6 @@
       <button class="btn ghost" type="button" id="mpAnnuler">Annuler</button>
       <button class="btn primary" type="button" id="mpCreer">Créer le fichier</button>
     </div>
-  </div>
-</div>
-<div class="modal" id="modal3d" hidden>
-  <div class="modal-box m3d" role="dialog" aria-modal="true" aria-labelledby="m3dTitre">
-    <div class="m3d-h"><h3 id="m3dTitre">Vue 3D · <span id="m3dNom"></span></h3><span class="grow"></span>
-      <div class="seg" id="m3dFond" role="group" aria-label="Fond de la vue 3D"><button type="button" data-f="ortho" class="on">Vue aérienne</button><button type="button" data-f="topo">Carte topo</button></div>
-      <button class="btn soft icon" type="button" id="m3dFermer" aria-label="Fermer la vue 3D"><svg><use href="#i-x"/></svg></button></div>
-    <div class="m3d-map"><div id="map3d"></div><p class="m3d-msg" id="m3dMsg"></p></div>
-    <div class="m3d-f"><span class="hint">Clic droit (ou deux doigts) pour pivoter et incliner. Relief légèrement exagéré. Vue aérienne IGN : France uniquement.</span><span class="grow"></span>
-      <a class="btn ghost sm" id="m3dGM" target="_blank" rel="noopener">Google Maps ↗</a><a class="btn ghost sm" id="m3dGE" target="_blank" rel="noopener">Google Earth ↗</a></div>
   </div>
 </div>
 <div class="modal" id="modalBienvenue" hidden>

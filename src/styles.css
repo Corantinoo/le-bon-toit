@@ -529,11 +529,6 @@ table.rk{width:100%;border-collapse:collapse;font-size:14.5px;min-width:720px}
 .cta-culture b{font:600 18px var(--display)}
 
 /* Vue 3D */
-.m3d{max-width:1120px;height:min(86vh,780px);display:flex;flex-direction:column;gap:12px;padding:16px 18px}
-.m3d-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.m3d-h h3{font-size:22px}
-.m3d-h .seg{min-width:240px}
-.m3d-map{position:relative;flex:1;min-height:0;border-radius:14px;overflow:hidden;background:var(--panel-3)}
 #map3d{position:absolute;inset:0}
 .m3d-msg{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);margin:0;background:var(--panel);padding:12px 16px;border-radius:12px;box-shadow:var(--ombre);max-width:min(420px,90%);text-align:center;font-weight:600}
 .m3d-f{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -684,3 +679,21 @@ a.ct-lien:hover{background:var(--panel-3)}
 }
 @media (min-width:761px){ .det-photos.mob{display:none} }
 @media (prefers-reduced-motion:reduce){aside.panel{transition:none}}
+
+/* ---- Relief en 3D, posé sur la carte 2D ---- */
+.map-wrap .carte3d{position:absolute;inset:0;z-index:750;opacity:0;transition:opacity .25s ease;background:var(--panel-3)}
+.carte3d.vu{opacity:1}
+.map-wrap.en3d .leaflet-control-container,.map-wrap.en3d #infoJourBox{visibility:hidden}
+.barre3d{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:1001;display:flex;align-items:center;gap:6px;
+  background:var(--panel);border-radius:22px;padding:5px;box-shadow:var(--ombre);max-width:calc(100% - 120px)}
+.barre3d .seg{min-width:0}
+.barre3d .btn{white-space:nowrap}
+.ctrl3d button{width:34px;height:34px;border:0;background:var(--panel);color:var(--ink);font:800 13px/1 "Nunito Sans",sans-serif;cursor:pointer;border-radius:4px}
+.ctrl3d button:hover,.ctrl3d button:focus-visible{background:var(--panel-2)}
+.pin3d{display:flex;flex-direction:column;align-items:center;pointer-events:none}
+.pin3d span{background:var(--forest);color:#fff;font:700 13px/1.2 "Nunito Sans",sans-serif;padding:5px 9px;border-radius:12px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.35)}
+.pin3d i{width:2px;height:26px;background:linear-gradient(var(--forest),rgba(0,0,0,.2))}
+.pin3d b{width:12px;height:12px;border-radius:50%;background:var(--or);border:2px solid #fff;box-shadow:0 0 0 3px rgba(181,117,31,.35)}
+.carte3d .maplibregl-popup-content{font:600 13px/1.3 "Nunito Sans",sans-serif;padding:6px 10px;color:#23392D}
+@media (max-width:760px){.barre3d{top:10px;max-width:calc(100% - 70px)}.barre3d .btn{padding-inline:10px}}
+@media (prefers-reduced-motion:reduce){.carte3d{transition:none}}

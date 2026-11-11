@@ -86,6 +86,16 @@ async def main():
                 await pg.wait_for_timeout(600)
                 ok(await pg.is_visible("#detail h3"), "une fiche de cabane s'ouvre par son lien")
                 await pg.screenshot(path=str(CAPT / f"{nom}-fiche.png"))
+                # le relief en 3D s'ouvre avec la fiche (si le navigateur de test sait faire du WebGL2)
+                if await pg.evaluate("'WebGL2RenderingContext' in window"):
+                    await pg.wait_for_timeout(3500)
+                    en3d = "document.getElementById('mapWrap').classList.contains('en3d')"
+                    ok(await pg.evaluate(en3d), "le relief 3D s'ouvre avec la fiche")
+                    await pg.screenshot(path=str(CAPT / f"{nom}-fiche-3d.png"))
+                    await pg.click("#btn2D")
+                    await pg.wait_for_timeout(1200)
+                    ok(not await pg.evaluate(en3d), "« Revenir en 2D » ramène la carte 2D")
+                    ok(await pg.is_visible("#detail h3"), "la fiche reste ouverte en revenant en 2D")
             if d.get("photos"):
                 await pg.wait_for_timeout(500)
                 nb = await pg.evaluate("document.querySelectorAll('#detHero img, #list .card img').length")
