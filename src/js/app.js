@@ -1461,10 +1461,38 @@ function capVers(c){
 }
 /* le ciel se règle sur l'heure et l'endroit ; si le style n'est pas encore prêt, on le fera à son chargement */
 function majCiel3D(lat, lng){ if (m3.isStyleLoaded()) m3.setSky(ciel3D(lat, lng)); else m3.once("load", () => m3.setSky(ciel3D(lat, lng))); }
+/* D'où regarder la cabane ? On teste 16 directions et on place la caméra du côté le plus bas (la vallée),
+   pour qu'aucune crête ne cache la cabane. Le relief doit être chargé : sinon, on garde le cap actuel. */
+function meilleurCap(c){
+  const altC = m3.queryTerrainElevation([c.lng, c.lat]);
+  if (altC == null) return null;
+  const kx = 1 / (111320 * Math.cos(c.lat * Math.PI / 180)), ky = 1 / 110540, actuel = m3.getBearing();
+  let meilleur = null, scoreMin = Infinity;
+  for (let i = 0; i < 16; i++){
+    const cap = i * 22.5 - 180, r = (cap + 180) * Math.PI / 180;   /* la caméra est derrière : à l'opposé du cap */
+    let pire = -Infinity, n = 0;
+    for (const dist of [300, 700, 1200, 1800, 2500]){
+      const z = m3.queryTerrainElevation([c.lng + Math.sin(r) * dist * kx, c.lat + Math.cos(r) * dist * ky]);
+      if (z == null) continue;
+      n++; pire = Math.max(pire, (z - altC) / dist);   /* pente vue depuis la cabane : plus elle monte, plus elle cache */
+    }
+    if (!n) continue;
+    const tour = Math.abs(((cap - actuel + 540) % 360) - 180) / 180;   /* à vue égale, on tourne le moins possible */
+    const score = pire + tour * .08;
+    if (score < scoreMin){ scoreMin = score; meilleur = cap; }
+  }
+  return meilleur;
+}
 function survoler3D(c){
-  const d = animationsReduites() ? 0 : 1000;
+  const d = animationsReduites() ? 0 : 1000, j = jeton3D, pitch = innerWidth <= 760 ? 56 : 62;
   majCiel3D(c.lat, c.lng);
-  m3.flyTo({center:[c.lng, c.lat], zoom:13.6, pitch:innerWidth <= 760 ? 56 : 62, bearing:capVers(c), padding:margeTiroir(), duration:d, curve:1.3, essential:true});
+  m3.flyTo({center:[c.lng, c.lat], zoom:13.6, pitch, bearing:capVers(c), padding:margeTiroir(), duration:d, curve:1.3, essential:true});
+  /* une fois arrivé et le relief chargé : on se recale sur la cabane et on tourne vers le meilleur point de vue */
+  setTimeout(() => attendre3D(5000).then(() => {
+    if (j !== jeton3D || !en3D || selId !== c.id) return;
+    const cap = meilleurCap(c);
+    m3.easeTo({center:[c.lng, c.lat], bearing:cap == null ? m3.getBearing() : cap, pitch, padding:margeTiroir(), duration:animationsReduites() ? 0 : 1400, essential:true});
+  }), d + 50);
   const el = document.createElement("div"); el.className = "pin3d"; el.innerHTML = `<span>${esc(c.nom)}</span><i></i><b></b>`;
   if (pin3) pin3.remove();
   pin3 = new maplibregl.Marker({element:el, anchor:"bottom", offset:[0, 6]}).setLngLat([c.lng, c.lat]).addTo(m3);
